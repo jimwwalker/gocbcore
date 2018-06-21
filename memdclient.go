@@ -171,19 +171,25 @@ func (client *memdClient) resolveRequest(resp *memdQResponse) {
 		}
 	}
 
-	if client.parent != nil {
-		shortCircuited, routeErr := client.parent.handleOpRoutingResp(resp, req, err)
-		if shortCircuited {
-			req.processingLock.Unlock()
-			logSchedf("Routing callback intercepted response")
-			return
+	if client.parent == nil {
+		req.processingLock.Unlock()
+	} else {
+		if !req.Persistent {
+			client.parent.stopCmdTrace(req)
 		}
 
-		err = routeErr
+		req.processingLock.Unlock()
+		if err != ErrCancelled {
+			shortCircuited, routeErr := client.parent.handleOpRoutingResp(resp, req, err)
+			if shortCircuited {
+				logSchedf("Routing callback intercepted response")
+				return
+			}
+			err = routeErr
+		}
 	}
 
 	// Call the requests callback handler...
-	req.processingLock.Unlock()
 	logSchedf("Dispatching response callback. OP=0x%x. Opaque=%d", resp.Opcode, resp.Opaque)
 	req.tryCallback(resp, err)
 }
