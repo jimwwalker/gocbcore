@@ -36,6 +36,7 @@ type Agent struct {
 	useCompression       bool
 	useDurations         bool
 	disableDecompression bool
+	useCollections       bool
 
 	compressionMinSize  int
 	compressionMinRatio float64
@@ -115,6 +116,7 @@ type AgentConfig struct {
 	UseCompression       bool
 	UseDurations         bool
 	DisableDecompression bool
+	UseCollections       bool
 
 	CompressionMinSize  int
 	CompressionMinRatio float64
@@ -635,6 +637,7 @@ func createAgent(config *AgentConfig, initFn memdInitFunc) (*Agent, error) {
 		compressionMinRatio:  0.83,
 		useDurations:         config.UseDurations,
 		noRootTraceSpans:     config.NoRootTraceSpans,
+		useCollections:       config.UseCollections,
 		serverFailures:       make(map[string]time.Time),
 		serverConnectTimeout: 7000 * time.Millisecond,
 		serverWaitTimeout:    5 * time.Second,
@@ -731,6 +734,11 @@ func (agent *Agent) connect(memdAddrs, httpAddrs []string, deadline time.Time) e
 		} else if err != nil {
 			logDebugf("Connecting failed! %v", err)
 			continue
+		}
+
+		if agent.useCollections && !checkSupportsFeature(client.features, FeatureCollections) {
+			logDebugf("Disabling collections as unsupported")
+			agent.useCollections = false
 		}
 
 		disconnectClient := func() {

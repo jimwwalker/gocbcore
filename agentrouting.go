@@ -77,6 +77,10 @@ func (agent *Agent) dialMemdClient(address string) (*memdClient, error) {
 		features = append(features, FeatureDurations)
 	}
 
+	if agent.useCollections {
+		features = append(features, FeatureCollections)
+	}
+
 	agentName := "gocbcore/" + goCbCoreVersionStr
 	if agent.userString != "" {
 		agentName += " " + agent.userString
@@ -312,7 +316,7 @@ func (agent *Agent) routeRequest(req *memdQRequest) (*memdPipeline, error) {
 		var err error
 
 		if routingInfo.bktType == bktTypeCouchbase {
-			if req.Key != nil {
+			if req.Key != nil && req.Opcode != cmdCollectionsGetID {
 				req.Vbucket = routingInfo.vbMap.VbucketByKey(req.Key)
 			}
 
