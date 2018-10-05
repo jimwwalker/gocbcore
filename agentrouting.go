@@ -77,6 +77,10 @@ func (agent *Agent) dialMemdClient(address string) (*memdClient, error) {
 		features = append(features, FeatureDurations)
 	}
 
+	if agent.useCollections {
+		features = append(features, FeatureCollections)
+	}
+
 	agentName := "gocbcore/" + goCbCoreVersionStr
 	if agent.userString != "" {
 		agentName += " " + agent.userString

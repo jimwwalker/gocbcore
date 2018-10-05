@@ -35,6 +35,7 @@ type Agent struct {
 	useEnhancedErrors bool
 	useCompression    bool
 	useDurations      bool
+	useCollections    bool
 
 	compressionMinSize  int
 	compressionMinRatio float64
@@ -111,6 +112,7 @@ type AgentConfig struct {
 	UseEnhancedErrors bool
 	UseCompression    bool
 	UseDurations      bool
+	UseCollections    bool
 
 	CompressionMinSize  int
 	CompressionMinRatio float64
@@ -600,6 +602,7 @@ func createAgent(config *AgentConfig, initFn memdInitFunc) (*Agent, error) {
 		compressionMinRatio:  0.83,
 		useDurations:         config.UseDurations,
 		noRootTraceSpans:     config.NoRootTraceSpans,
+		useCollections:       config.UseCollections,
 		serverFailures:       make(map[string]time.Time),
 		serverConnectTimeout: 7000 * time.Millisecond,
 		serverWaitTimeout:    5 * time.Second,

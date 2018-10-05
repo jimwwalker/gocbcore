@@ -11,6 +11,7 @@ import (
 // GetOptions encapsulates the parameters for a GetEx operation.
 type GetOptions struct {
 	Key          []byte
+	CollectionID uint32
 	TraceContext opentracing.SpanContext
 }
 
@@ -51,6 +52,11 @@ func (agent *Agent) GetEx(opts GetOptions, cb GetExCallback) (PendingOp, error) 
 		tracer.Finish()
 		cb(&res, nil)
 	}
+
+	encodedKey := make([]byte, 0, len(opts.Key)+5)
+	encodedKey = appendUleb128_32(encodedKey, opts.CollectionID)
+	encodedKey = append(encodedKey, opts.Key...)
+
 	req := &memdQRequest{
 		memdPacket: memdPacket{
 			Magic:    reqMagic,
@@ -58,7 +64,7 @@ func (agent *Agent) GetEx(opts GetOptions, cb GetExCallback) (PendingOp, error) 
 			Datatype: 0,
 			Cas:      0,
 			Extras:   nil,
-			Key:      opts.Key,
+			Key:      encodedKey,
 			Value:    nil,
 		},
 		Callback:         handler,
@@ -534,6 +540,7 @@ func (agent *Agent) DeleteEx(opts DeleteOptions, cb DeleteExCallback) (PendingOp
 
 type storeOptions struct {
 	Key          []byte
+	CollectionID uint32
 	Value        []byte
 	Flags        uint32
 	Datatype     uint8
@@ -575,6 +582,13 @@ func (agent *Agent) storeEx(opName string, opcode commandCode, opts storeOptions
 		}, nil)
 	}
 
+	encodedKey := opts.Key
+	//if collectionsEnabled {
+	encodedKey = make([]byte, 0, len(opts.Key)+5)
+	encodedKey = appendUleb128_32(encodedKey, opts.CollectionID)
+	encodedKey = append(encodedKey, opts.Key...)
+	//}
+
 	extraBuf := make([]byte, 8)
 	binary.BigEndian.PutUint32(extraBuf[0:], opts.Flags)
 	binary.BigEndian.PutUint32(extraBuf[4:], opts.Expiry)
@@ -585,7 +599,7 @@ func (agent *Agent) storeEx(opName string, opcode commandCode, opts storeOptions
 			Datatype: opts.Datatype,
 			Cas:      uint64(opts.Cas),
 			Extras:   extraBuf,
-			Key:      opts.Key,
+			Key:      encodedKey,
 			Value:    opts.Value,
 		},
 		Callback:         handler,
@@ -620,6 +634,7 @@ func (agent *Agent) AddEx(opts AddOptions, cb StoreExCallback) (PendingOp, error
 // SetOptions encapsulates the parameters for a SetEx operation.
 type SetOptions struct {
 	Key          []byte
+	CollectionID uint32
 	Value        []byte
 	Flags        uint32
 	Datatype     uint8
@@ -631,6 +646,7 @@ type SetOptions struct {
 func (agent *Agent) SetEx(opts SetOptions, cb StoreExCallback) (PendingOp, error) {
 	return agent.storeEx("SetEx", cmdSet, storeOptions{
 		Key:          opts.Key,
+		CollectionID: opts.CollectionID,
 		Value:        opts.Value,
 		Flags:        opts.Flags,
 		Datatype:     opts.Datatype,
