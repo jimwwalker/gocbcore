@@ -406,6 +406,7 @@ type LookupInOptions struct {
 	Key          []byte
 	Flags        SubdocDocFlag
 	Ops          []SubDocOp
+	CollectionID uint32
 	TraceContext opentracing.SpanContext
 }
 
@@ -451,7 +452,7 @@ func (agent *Agent) LookupInEx(opts LookupInOptions, cb LookupInExCallback) (Pen
 				return
 			}
 
-			results[i].Err = agent.makeBasicMemdError(resError)
+			results[i].Err = agent.makeBasicMemdError(resError, resp.Opaque)
 			results[i].Value = resp.Value[respIter+6 : respIter+6+resValueLen]
 			respIter += 6 + resValueLen
 		}
@@ -498,6 +499,8 @@ func (agent *Agent) LookupInEx(opts LookupInOptions, cb LookupInExCallback) (Pen
 		extraBuf = append(extraBuf, uint8(opts.Flags))
 	}
 
+	encodedKey := agent.createEncodedKey(opts.Key, opts.CollectionID)
+
 	req := &memdQRequest{
 		memdPacket: memdPacket{
 			Magic:    reqMagic,
@@ -505,7 +508,7 @@ func (agent *Agent) LookupInEx(opts LookupInOptions, cb LookupInExCallback) (Pen
 			Datatype: 0,
 			Cas:      0,
 			Extras:   extraBuf,
-			Key:      opts.Key,
+			Key:      encodedKey,
 			Value:    valueBuf,
 		},
 		Callback:         handler,
@@ -521,6 +524,7 @@ type MutateInOptions struct {
 	Cas          Cas
 	Expiry       uint32
 	Ops          []SubDocOp
+	CollectionID uint32
 	TraceContext opentracing.SpanContext
 }
 
@@ -560,7 +564,7 @@ func (agent *Agent) MutateInEx(opts MutateInOptions, cb MutateInExCallback) (Pen
 			resError := StatusCode(binary.BigEndian.Uint16(resp.Value[1:]))
 
 			err := SubDocMutateError{
-				Err:     agent.makeBasicMemdError(resError),
+				Err:     agent.makeBasicMemdError(resError, resp.Opaque),
 				OpIndex: opIndex,
 			}
 			tracer.Finish()
@@ -571,7 +575,7 @@ func (agent *Agent) MutateInEx(opts MutateInOptions, cb MutateInExCallback) (Pen
 		for readPos := uint32(0); readPos < uint32(len(resp.Value)); {
 			opIndex := int(resp.Value[readPos+0])
 			opStatus := StatusCode(binary.BigEndian.Uint16(resp.Value[readPos+1:]))
-			results[opIndex].Err = agent.makeBasicMemdError(opStatus)
+			results[opIndex].Err = agent.makeBasicMemdError(opStatus, resp.Opaque)
 			readPos += 3
 
 			if opStatus == StatusSuccess {
@@ -642,6 +646,8 @@ func (agent *Agent) MutateInEx(opts MutateInOptions, cb MutateInExCallback) (Pen
 		extraBuf = append(extraBuf, uint8(opts.Flags))
 	}
 
+	encodedKey := agent.createEncodedKey(opts.Key, opts.CollectionID)
+
 	req := &memdQRequest{
 		memdPacket: memdPacket{
 			Magic:    reqMagic,
@@ -649,7 +655,7 @@ func (agent *Agent) MutateInEx(opts MutateInOptions, cb MutateInExCallback) (Pen
 			Datatype: 0,
 			Cas:      uint64(opts.Cas),
 			Extras:   extraBuf,
-			Key:      opts.Key,
+			Key:      encodedKey,
 			Value:    valueBuf,
 		},
 		Callback:         handler,

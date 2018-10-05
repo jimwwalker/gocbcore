@@ -7,9 +7,21 @@ import (
 	"github.com/opentracing/opentracing-go"
 )
 
+func (agent *Agent) createEncodedKey(key []byte, collectionID uint32) []byte {
+	encodedKey := key
+	if agent.useCollections {
+		encodedKey = make([]byte, 0, len(key)+5)
+		encodedKey = appendUleb128_32(encodedKey, collectionID)
+		encodedKey = append(encodedKey, key...)
+	}
+
+	return encodedKey
+}
+
 // GetOptions encapsulates the parameters for a GetEx operation.
 type GetOptions struct {
 	Key          []byte
+	CollectionID uint32
 	TraceContext opentracing.SpanContext
 }
 
@@ -50,6 +62,9 @@ func (agent *Agent) GetEx(opts GetOptions, cb GetExCallback) (PendingOp, error) 
 		tracer.Finish()
 		cb(&res, nil)
 	}
+
+	encodedKey := agent.createEncodedKey(opts.Key, opts.CollectionID)
+
 	req := &memdQRequest{
 		memdPacket: memdPacket{
 			Magic:    reqMagic,
@@ -57,7 +72,7 @@ func (agent *Agent) GetEx(opts GetOptions, cb GetExCallback) (PendingOp, error) 
 			Datatype: 0,
 			Cas:      0,
 			Extras:   nil,
-			Key:      opts.Key,
+			Key:      encodedKey,
 			Value:    nil,
 		},
 		Callback:         handler,
@@ -71,6 +86,7 @@ type GetAndTouchOptions struct {
 	Key          []byte
 	Expiry       uint32
 	TraceContext opentracing.SpanContext
+	CollectionID uint32
 }
 
 // GetAndTouchResult encapsulates the result of a GetAndTouchEx operation.
@@ -115,6 +131,8 @@ func (agent *Agent) GetAndTouchEx(opts GetAndTouchOptions, cb GetAndTouchExCallb
 	extraBuf := make([]byte, 4)
 	binary.BigEndian.PutUint32(extraBuf[0:], opts.Expiry)
 
+	encodedKey := agent.createEncodedKey(opts.Key, opts.CollectionID)
+
 	req := &memdQRequest{
 		memdPacket: memdPacket{
 			Magic:    reqMagic,
@@ -122,7 +140,7 @@ func (agent *Agent) GetAndTouchEx(opts GetAndTouchOptions, cb GetAndTouchExCallb
 			Datatype: 0,
 			Cas:      0,
 			Extras:   extraBuf,
-			Key:      opts.Key,
+			Key:      encodedKey,
 			Value:    nil,
 		},
 		Callback: handler,
@@ -135,6 +153,7 @@ type GetAndLockOptions struct {
 	Key          []byte
 	LockTime     uint32
 	TraceContext opentracing.SpanContext
+	CollectionID uint32
 }
 
 // GetAndLockResult encapsulates the result of a GetAndLockEx operation.
@@ -179,6 +198,8 @@ func (agent *Agent) GetAndLockEx(opts GetAndLockOptions, cb GetAndLockExCallback
 	extraBuf := make([]byte, 4)
 	binary.BigEndian.PutUint32(extraBuf[0:], opts.LockTime)
 
+	encodedKey := agent.createEncodedKey(opts.Key, opts.CollectionID)
+
 	req := &memdQRequest{
 		memdPacket: memdPacket{
 			Magic:    reqMagic,
@@ -186,7 +207,7 @@ func (agent *Agent) GetAndLockEx(opts GetAndLockOptions, cb GetAndLockExCallback
 			Datatype: 0,
 			Cas:      0,
 			Extras:   extraBuf,
-			Key:      opts.Key,
+			Key:      encodedKey,
 			Value:    nil,
 		},
 		Callback:         handler,
@@ -200,6 +221,7 @@ type GetReplicaOptions struct {
 	Key          []byte
 	ReplicaIdx   int
 	TraceContext opentracing.SpanContext
+	CollectionID uint32
 }
 
 // GetReplicaResult encapsulates the result of a GetReplicaEx operation.
@@ -239,6 +261,8 @@ func (agent *Agent) getOneReplica(tracer *opTracer, opts GetReplicaOptions, cb G
 		}, nil)
 	}
 
+	encodedKey := agent.createEncodedKey(opts.Key, opts.CollectionID)
+
 	req := &memdQRequest{
 		memdPacket: memdPacket{
 			Magic:    reqMagic,
@@ -246,7 +270,7 @@ func (agent *Agent) getOneReplica(tracer *opTracer, opts GetReplicaOptions, cb G
 			Datatype: 0,
 			Cas:      0,
 			Extras:   nil,
-			Key:      opts.Key,
+			Key:      encodedKey,
 			Value:    nil,
 		},
 		Callback:         handler,
@@ -355,6 +379,7 @@ type TouchOptions struct {
 	Cas          Cas
 	Expiry       uint32
 	TraceContext opentracing.SpanContext
+	CollectionID uint32
 }
 
 // TouchResult encapsulates the result of a TouchEx operation.
@@ -398,6 +423,8 @@ func (agent *Agent) TouchEx(opts TouchOptions, cb TouchExCallback) (PendingOp, e
 	extraBuf := make([]byte, 4)
 	binary.BigEndian.PutUint32(extraBuf[0:], opts.Expiry)
 
+	encodedKey := agent.createEncodedKey(opts.Key, opts.CollectionID)
+
 	req := &memdQRequest{
 		memdPacket: memdPacket{
 			Magic:    reqMagic,
@@ -405,7 +432,7 @@ func (agent *Agent) TouchEx(opts TouchOptions, cb TouchExCallback) (PendingOp, e
 			Datatype: 0,
 			Cas:      0,
 			Extras:   extraBuf,
-			Key:      opts.Key,
+			Key:      encodedKey,
 			Value:    nil,
 		},
 		Callback:         handler,
@@ -419,6 +446,7 @@ type UnlockOptions struct {
 	Key          []byte
 	Cas          Cas
 	TraceContext opentracing.SpanContext
+	CollectionID uint32
 }
 
 // UnlockResult encapsulates the result of a UnlockEx operation.
@@ -455,6 +483,8 @@ func (agent *Agent) UnlockEx(opts UnlockOptions, cb UnlockExCallback) (PendingOp
 		}, nil)
 	}
 
+	encodedKey := agent.createEncodedKey(opts.Key, opts.CollectionID)
+
 	req := &memdQRequest{
 		memdPacket: memdPacket{
 			Magic:    reqMagic,
@@ -462,7 +492,7 @@ func (agent *Agent) UnlockEx(opts UnlockOptions, cb UnlockExCallback) (PendingOp
 			Datatype: 0,
 			Cas:      uint64(opts.Cas),
 			Extras:   nil,
-			Key:      opts.Key,
+			Key:      encodedKey,
 			Value:    nil,
 		},
 		Callback:         handler,
@@ -474,6 +504,7 @@ func (agent *Agent) UnlockEx(opts UnlockOptions, cb UnlockExCallback) (PendingOp
 // DeleteOptions encapsulates the parameters for a DeleteEx operation.
 type DeleteOptions struct {
 	Key          []byte
+	CollectionID uint32
 	Cas          Cas
 	TraceContext opentracing.SpanContext
 }
@@ -512,6 +543,8 @@ func (agent *Agent) DeleteEx(opts DeleteOptions, cb DeleteExCallback) (PendingOp
 		}, nil)
 	}
 
+	encodedKey := agent.createEncodedKey(opts.Key, opts.CollectionID)
+
 	req := &memdQRequest{
 		memdPacket: memdPacket{
 			Magic:    reqMagic,
@@ -519,7 +552,7 @@ func (agent *Agent) DeleteEx(opts DeleteOptions, cb DeleteExCallback) (PendingOp
 			Datatype: 0,
 			Cas:      uint64(opts.Cas),
 			Extras:   nil,
-			Key:      opts.Key,
+			Key:      encodedKey,
 			Value:    nil,
 		},
 		Callback:         handler,
@@ -530,6 +563,7 @@ func (agent *Agent) DeleteEx(opts DeleteOptions, cb DeleteExCallback) (PendingOp
 
 type storeOptions struct {
 	Key          []byte
+	CollectionID uint32
 	Value        []byte
 	Flags        uint32
 	Datatype     uint8
@@ -571,6 +605,8 @@ func (agent *Agent) storeEx(opName string, opcode commandCode, opts storeOptions
 		}, nil)
 	}
 
+	encodedKey := agent.createEncodedKey(opts.Key, opts.CollectionID)
+
 	extraBuf := make([]byte, 8)
 	binary.BigEndian.PutUint32(extraBuf[0:], opts.Flags)
 	binary.BigEndian.PutUint32(extraBuf[4:], opts.Expiry)
@@ -581,7 +617,7 @@ func (agent *Agent) storeEx(opName string, opcode commandCode, opts storeOptions
 			Datatype: opts.Datatype,
 			Cas:      uint64(opts.Cas),
 			Extras:   extraBuf,
-			Key:      opts.Key,
+			Key:      encodedKey,
 			Value:    opts.Value,
 		},
 		Callback:         handler,
@@ -593,6 +629,7 @@ func (agent *Agent) storeEx(opName string, opcode commandCode, opts storeOptions
 // AddOptions encapsulates the parameters for a AddEx operation.
 type AddOptions struct {
 	Key          []byte
+	CollectionID uint32
 	Value        []byte
 	Flags        uint32
 	Datatype     uint8
@@ -604,6 +641,7 @@ type AddOptions struct {
 func (agent *Agent) AddEx(opts AddOptions, cb StoreExCallback) (PendingOp, error) {
 	return agent.storeEx("AddEx", cmdAdd, storeOptions{
 		Key:          opts.Key,
+		CollectionID: opts.CollectionID,
 		Value:        opts.Value,
 		Flags:        opts.Flags,
 		Datatype:     opts.Datatype,
@@ -616,6 +654,7 @@ func (agent *Agent) AddEx(opts AddOptions, cb StoreExCallback) (PendingOp, error
 // SetOptions encapsulates the parameters for a SetEx operation.
 type SetOptions struct {
 	Key          []byte
+	CollectionID uint32
 	Value        []byte
 	Flags        uint32
 	Datatype     uint8
@@ -627,6 +666,7 @@ type SetOptions struct {
 func (agent *Agent) SetEx(opts SetOptions, cb StoreExCallback) (PendingOp, error) {
 	return agent.storeEx("SetEx", cmdSet, storeOptions{
 		Key:          opts.Key,
+		CollectionID: opts.CollectionID,
 		Value:        opts.Value,
 		Flags:        opts.Flags,
 		Datatype:     opts.Datatype,
@@ -639,6 +679,7 @@ func (agent *Agent) SetEx(opts SetOptions, cb StoreExCallback) (PendingOp, error
 // ReplaceOptions encapsulates the parameters for a ReplaceEx operation.
 type ReplaceOptions struct {
 	Key          []byte
+	CollectionID uint32
 	Value        []byte
 	Flags        uint32
 	Datatype     uint8
@@ -651,6 +692,7 @@ type ReplaceOptions struct {
 func (agent *Agent) ReplaceEx(opts ReplaceOptions, cb StoreExCallback) (PendingOp, error) {
 	return agent.storeEx("ReplaceEx", cmdSet, storeOptions{
 		Key:          opts.Key,
+		CollectionID: opts.CollectionID,
 		Value:        opts.Value,
 		Flags:        opts.Flags,
 		Datatype:     opts.Datatype,
@@ -664,6 +706,7 @@ func (agent *Agent) ReplaceEx(opts ReplaceOptions, cb StoreExCallback) (PendingO
 type AdjoinOptions struct {
 	Key          []byte
 	Value        []byte
+	CollectionID uint32
 	TraceContext opentracing.SpanContext
 }
 
@@ -700,6 +743,8 @@ func (agent *Agent) adjoinEx(opName string, opcode commandCode, opts AdjoinOptio
 		}, nil)
 	}
 
+	encodedKey := agent.createEncodedKey(opts.Key, opts.CollectionID)
+
 	req := &memdQRequest{
 		memdPacket: memdPacket{
 			Magic:    reqMagic,
@@ -707,7 +752,7 @@ func (agent *Agent) adjoinEx(opName string, opcode commandCode, opts AdjoinOptio
 			Datatype: 0,
 			Cas:      0,
 			Extras:   nil,
-			Key:      opts.Key,
+			Key:      encodedKey,
 			Value:    opts.Value,
 		},
 		Callback:         handler,
@@ -740,6 +785,7 @@ type CounterOptions struct {
 	Initial      uint64
 	Expiry       uint32
 	TraceContext opentracing.SpanContext
+	CollectionID uint32
 }
 
 // CounterResult encapsulates the result of a IncrementEx or DecrementEx operation.
@@ -784,6 +830,8 @@ func (agent *Agent) counterEx(opName string, opcode commandCode, opts CounterOpt
 		}, nil)
 	}
 
+	encodedKey := agent.createEncodedKey(opts.Key, opts.CollectionID)
+
 	// You cannot have an expiry when you do not want to create the document.
 	if opts.Initial == uint64(0xFFFFFFFFFFFFFFFF) && opts.Expiry != 0 {
 		return nil, ErrInvalidArgs
@@ -806,7 +854,7 @@ func (agent *Agent) counterEx(opName string, opcode commandCode, opts CounterOpt
 			Datatype: 0,
 			Cas:      0,
 			Extras:   extraBuf,
-			Key:      opts.Key,
+			Key:      encodedKey,
 			Value:    nil,
 		},
 		Callback:         handler,

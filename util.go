@@ -20,6 +20,21 @@ func formatCbUid(data []byte) string {
 		data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7])
 }
 
+func appendUleb128_32(b []byte, v uint32) []byte {
+	for {
+		c := uint8(v & 0x7f)
+		v >>= 7
+		if v != 0 {
+			c |= 0x80
+		}
+		b = append(b, c)
+		if c&0x80 == 0 {
+			break
+		}
+	}
+	return b
+}
+
 func getCommandName(command commandCode) string {
 	switch command {
 	case cmdGet:
