@@ -10,7 +10,7 @@ import (
 
 // CollectionManifestCollection represents a collection entry within a manifest.
 type CollectionManifestCollection struct {
-	UID  uint64
+	UID  uint32
 	Name string
 }
 
@@ -24,19 +24,19 @@ func (item *CollectionManifestCollection) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	decUID, err := strconv.ParseUint(decData.UID, 16, 64)
+	decUID, err := strconv.ParseUint(decData.UID, 16, 32)
 	if err != nil {
 		return err
 	}
 
-	item.UID = decUID
+	item.UID = uint32(decUID)
 	item.Name = decData.Name
 	return nil
 }
 
 // CollectionManifestScope represents a scope entry within a manifest.
 type CollectionManifestScope struct {
-	UID         uint64
+	UID         uint32
 	Name        string
 	Collections []CollectionManifestCollection
 }
@@ -52,12 +52,12 @@ func (item *CollectionManifestScope) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	decUID, err := strconv.ParseUint(decData.UID, 16, 64)
+	decUID, err := strconv.ParseUint(decData.UID, 16, 32)
 	if err != nil {
 		return err
 	}
 
-	item.UID = decUID
+	item.UID = uint32(decUID)
 	item.Name = decData.Name
 	item.Collections = decData.Collections
 	return nil
@@ -96,7 +96,7 @@ type CollectionManifestCallback func(manifest []byte, err error)
 // GetCollectionManifest fetches the latest manifest from the server.
 func (agent *Agent) GetCollectionManifest(cb CollectionManifestCallback) (PendingOp, error) {
 	handler := func(resp *memdQResponse, req *memdQRequest, err error) {
-		log.Printf("Got Manifest %+v %+v %+v", err, resp, req)
+		// log.Printf("Got Manifest %+v %+v %+v", err, resp, req)
 		if err != nil {
 			cb(nil, err)
 			return
@@ -117,7 +117,7 @@ func (agent *Agent) GetCollectionManifest(cb CollectionManifestCallback) (Pendin
 		},
 		Callback: handler,
 	}
-	log.Printf("Requesting manifest %+v", req)
+	// log.Printf("Requesting manifest %+v", req)
 	return agent.dispatchOp(req)
 }
 
