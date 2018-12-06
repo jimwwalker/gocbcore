@@ -145,6 +145,8 @@ type AgentConfig struct {
 	// Password specifies the password to use when connecting.
 	// DEPRECATED
 	Password string
+
+	EnableStreamId bool
 }
 
 // FromConnStr populates the AgentConfig with information from a
@@ -546,6 +548,11 @@ func CreateDcpAgent(configIn *AgentConfig, dcpStreamName string, openFlags DcpOp
 		}
 		if err := client.ExecEnableDcpNoop(180*time.Second, deadline); err != nil {
 			return err
+		}
+		if configIn.EnableStreamId {
+			if err := client.ExecDcpControl("enable_stream_id", "true", deadline); err != nil {
+				return err
+			}
 		}
 		return client.ExecEnableDcpBufferAck(8*1024*1024, deadline)
 	}

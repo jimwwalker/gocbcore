@@ -39,6 +39,9 @@ func (agent *Agent) dialMemdClient(address string) (*memdClient, error) {
 		logDebugf("Failed to connect. %v", err)
 		return nil, err
 	}
+	if agent.useDurations {
+
+	}
 
 	client := newMemdClient(agent, memdConn)
 
@@ -137,6 +140,14 @@ func (agent *Agent) dialMemdClient(address string) (*memdClient, error) {
 		} else {
 			logDebugf("Failed to fetch kv error map (%s)", err)
 		}
+	}
+
+	if checkSupportsFeature(srvFeatures, FeatureCollections) {
+		memdConn.EnableCollections(true)
+	}
+
+	if checkSupportsFeature(srvFeatures, FeatureDurations) {
+		memdConn.EnableFramingExtras(true)
 	}
 
 	logDebugf("Authenticating...")

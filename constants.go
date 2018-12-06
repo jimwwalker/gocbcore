@@ -10,6 +10,7 @@ const (
 	reqMagic = commandMagic(0x80)
 	resMagic = commandMagic(0x81)
 
+	altReqMagic = commandMagic(0x08)
 	altResMagic = commandMagic(0x18)
 )
 
@@ -17,6 +18,7 @@ type frameExtraType uint16
 
 const (
 	srvDurationFrameExtra = frameExtraType(0)
+	streamIdFrameExtra    = frameExtraType(2)
 )
 
 // commandCode for memcached packets.
@@ -311,22 +313,22 @@ const (
 type StreamEventCode uint32
 
 const (
-	// CollectionCreate is the StreamEventCode for a collection create event
+	// StreamEventCollectionCreate is the StreamEventCode for a collection create event
 	StreamEventCollectionCreate = StreamEventCode(0x00)
 
-	// CollectionDelete is the StreamEventCode for a collection delete event
+	// StreamEventCollectionDelete is the StreamEventCode for a collection delete event
 	StreamEventCollectionDelete = StreamEventCode(0x01)
 
-	// CollectionFlush is the StreamEventCode for a collection flush event
+	// StreamEventCollectionFlush is the StreamEventCode for a collection flush event
 	StreamEventCollectionFlush = StreamEventCode(0x02)
 
-	// ScopeCreate is the StreamEventCode for a scope create event
+	// StreamEventScopeCreate is the StreamEventCode for a scope create event
 	StreamEventScopeCreate = StreamEventCode(0x03)
 
-	// ScopeDelete is the StreamEventCode for a scope delete event
+	// StreamEventScopeDelete is the StreamEventCode for a scope delete event
 	StreamEventScopeDelete = StreamEventCode(0x04)
 
-	// CollectionChanged is the StreamEventCode for a collection changed event
+	// StreamEventCollectionChanged is the StreamEventCode for a collection changed event
 	StreamEventCollectionChanged = StreamEventCode(0x05)
 )
 

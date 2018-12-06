@@ -34,17 +34,17 @@ type StreamObserver interface {
 }
 
 type CollectionStreamObserver interface {
-	SnapshotMarker(startSeqNo, endSeqNo uint64, vbId uint16, snapshotType SnapshotState)
-	Mutation(seqNo, revNo uint64, flags, expiry, lockTime uint32, cas uint64, datatype uint8, vbId uint16, collectionId uint32, key, value []byte)
-	Deletion(seqNo, revNo, cas uint64, datatype uint8, vbId uint16, collectionId uint32, key, value []byte)
-	Expiration(seqNo, revNo, cas uint64, vbId uint16, collectionId uint32, key []byte)
-	End(vbId uint16, err error)
-	CreateCollection(seqNo uint64, version uint8, vbId uint16, manifestUid uint64, scopeId uint32, collectionId uint32, ttl uint32, key []byte)
-	DeleteCollection(seqNo uint64, version uint8, vbId uint16, manifestUid uint64, collectionId uint32)
+	SnapshotMarker(startSeqNo, endSeqNo uint64, vbId uint16, streamId uint16, snapshotType SnapshotState)
+	Mutation(seqNo, revNo uint64, flags, expiry, lockTime uint32, cas uint64, datatype uint8, vbId uint16, collectionId uint32, streamId uint16, key, value []byte)
+	Deletion(seqNo, revNo, cas uint64, datatype uint8, vbId uint16, collectionId uint32, streamId uint16, key, value []byte)
+	Expiration(seqNo, revNo, cas uint64, vbId uint16, collectionId uint32, streamId uint16, key []byte)
+	End(vbId uint16, streamId uint16, err error)
+	CreateCollection(seqNo uint64, version uint8, vbId uint16, manifestUid uint64, scopeId uint32, collectionId uint32, ttl uint32, streamId uint16, key []byte)
+	DeleteCollection(seqNo uint64, version uint8, vbId uint16, manifestUid uint64, collectionId uint32, streamId uint16)
 	// FlushCollection(seqNo uint64, version uint8, vbId uint16, manifest_uid uint64, collection_id uint32)	// Not yet existing
-	CreateScope(seqNo uint64, version uint8, vbId uint16, manifestUid uint64, scopeId uint32, key []byte)
-	DeleteScope(seqNo uint64, version uint8, vbId uint16, manifestUid uint64, scopeId uint32)
-	ModifyCollection(seqNo uint64, version uint8, vbId uint16, manifestUid uint64, collectionId uint32, ttl uint32)
+	CreateScope(seqNo uint64, version uint8, vbId uint16, manifestUid uint64, scopeId uint32, streamId uint16, key []byte)
+	DeleteScope(seqNo uint64, version uint8, vbId uint16, manifestUid uint64, scopeId uint32, streamId uint16)
+	ModifyCollection(seqNo uint64, version uint8, vbId uint16, manifestUid uint64, collectionId uint32, ttl uint32, streamId uint16)
 }
 
 type CollectionStreamFilter struct {
@@ -52,13 +52,6 @@ type CollectionStreamFilter struct {
 	Collections []string `json:"collections,omitempty"`
 	Scope       string   `json:"scope,omitempty"`
 	StreamId    uint16   `json:"sid,omitempty"`
-}
-
-type collectionStreamFilter struct {
-	ManifestUid string   `json:"uid,omitempty"`
-	Collections []string `json:"collections,omitempty"`
-	Scope       string   `json:"scope,omitempty"`
-	StreamId    string   `json:"sid,omitempty"`
 }
 
 // OpenStreamCallback is invoked with the results of `OpenStream` operations.
@@ -109,7 +102,7 @@ func (agent *Agent) OpenCollectionStream(vbId uint16, flags DcpStreamAddFlag, vb
 
 		if err != nil {
 			req.Cancel()
-			evtHandler.End(vbId, err)
+			evtHandler.End(vbId, filter.StreamId, err)
 			return
 		}
 
@@ -120,7 +113,11 @@ func (agent *Agent) OpenCollectionStream(vbId uint16, flags DcpStreamAddFlag, vb
 			newStartSeqNo := binary.BigEndian.Uint64(resp.Extras[0:])
 			newEndSeqNo := binary.BigEndian.Uint64(resp.Extras[8:])
 			snapshotType := binary.BigEndian.Uint32(resp.Extras[16:])
-			evtHandler.SnapshotMarker(newStartSeqNo, newEndSeqNo, vbId, SnapshotState(snapshotType))
+			var streamId uint16
+			if resp.FrameExtras != nil && resp.FrameExtras.HasStreamId {
+				streamId = resp.FrameExtras.StreamId
+			}
+			evtHandler.SnapshotMarker(newStartSeqNo, newEndSeqNo, vbId, streamId, SnapshotState(snapshotType))
 		case cmdDcpMutation:
 			vbId := uint16(resp.Vbucket)
 			seqNo := binary.BigEndian.Uint64(resp.Extras[0:])
@@ -128,28 +125,38 @@ func (agent *Agent) OpenCollectionStream(vbId uint16, flags DcpStreamAddFlag, vb
 			flags := binary.BigEndian.Uint32(resp.Extras[16:])
 			expiry := binary.BigEndian.Uint32(resp.Extras[20:])
 			lockTime := binary.BigEndian.Uint32(resp.Extras[24:])
-			collectionId, n := decodeleb128_32(resp.Key)
-			key := resp.Key[n:]
-			evtHandler.Mutation(seqNo, revNo, flags, expiry, lockTime, resp.Cas, resp.Datatype, vbId, collectionId, key, resp.Value)
+			var streamId uint16
+			if resp.FrameExtras != nil && resp.FrameExtras.HasStreamId {
+				streamId = resp.FrameExtras.StreamId
+			}
+			evtHandler.Mutation(seqNo, revNo, flags, expiry, lockTime, resp.Cas, resp.Datatype, vbId, resp.CollectionId, streamId, resp.Key, resp.Value)
 		case cmdDcpDeletion:
 			vbId := uint16(resp.Vbucket)
 			seqNo := binary.BigEndian.Uint64(resp.Extras[0:])
 			revNo := binary.BigEndian.Uint64(resp.Extras[8:])
-			collectionId, n := decodeleb128_32(resp.Key)
-			key := resp.Key[n:]
-			evtHandler.Deletion(seqNo, revNo, resp.Cas, resp.Datatype, vbId, collectionId, key, resp.Value)
+			var streamId uint16
+			if resp.FrameExtras != nil && resp.FrameExtras.HasStreamId {
+				streamId = resp.FrameExtras.StreamId
+			}
+			evtHandler.Deletion(seqNo, revNo, resp.Cas, resp.Datatype, vbId, resp.CollectionId, streamId, resp.Key, resp.Value)
 		case cmdDcpExpiration:
 			vbId := uint16(resp.Vbucket)
 			seqNo := binary.BigEndian.Uint64(resp.Extras[0:])
 			revNo := binary.BigEndian.Uint64(resp.Extras[8:])
-			collectionId, n := decodeleb128_32(resp.Key)
-			key := resp.Key[n:]
-			evtHandler.Expiration(seqNo, revNo, resp.Cas, vbId, collectionId, key)
+			var streamId uint16
+			if resp.FrameExtras != nil && resp.FrameExtras.HasStreamId {
+				streamId = resp.FrameExtras.StreamId
+			}
+			evtHandler.Expiration(seqNo, revNo, resp.Cas, vbId, resp.CollectionId, streamId, resp.Key)
 		case cmdDcpEvent:
 			vbId := uint16(resp.Vbucket)
 			seqNo := binary.BigEndian.Uint64(resp.Extras[0:])
 			eventCode := StreamEventCode(binary.BigEndian.Uint32(resp.Extras[8:]))
 			version := resp.Extras[12]
+			var streamId uint16
+			if resp.FrameExtras != nil && resp.FrameExtras.HasStreamId {
+				streamId = resp.FrameExtras.StreamId
+			}
 
 			switch eventCode {
 			case StreamEventCollectionCreate:
@@ -160,31 +167,35 @@ func (agent *Agent) OpenCollectionStream(vbId uint16, flags DcpStreamAddFlag, vb
 				if version == 1 {
 					ttl = binary.BigEndian.Uint32(resp.Value[16:])
 				}
-				evtHandler.CreateCollection(seqNo, version, vbId, manifestUid, scopeId, collectionId, ttl, resp.Key)
+				evtHandler.CreateCollection(seqNo, version, vbId, manifestUid, scopeId, collectionId, ttl, streamId, resp.Key)
 			case StreamEventCollectionDelete:
 				manifestUid := binary.BigEndian.Uint64(resp.Value[0:])
 				collectionId := binary.BigEndian.Uint32(resp.Value[8:])
-				evtHandler.DeleteCollection(seqNo, version, vbId, manifestUid, collectionId)
+				evtHandler.DeleteCollection(seqNo, version, vbId, manifestUid, collectionId, streamId)
 			case StreamEventCollectionFlush:
 				// This isn't yet in existence but proposed
 			case StreamEventScopeCreate:
 				manifestUid := binary.BigEndian.Uint64(resp.Value[0:])
 				scopeId := binary.BigEndian.Uint32(resp.Value[8:])
-				evtHandler.CreateScope(seqNo, version, vbId, manifestUid, scopeId, resp.Key)
+				evtHandler.CreateScope(seqNo, version, vbId, manifestUid, scopeId, streamId, resp.Key)
 			case StreamEventScopeDelete:
 				manifestUid := binary.BigEndian.Uint64(resp.Value[0:])
 				scopeId := binary.BigEndian.Uint32(resp.Value[8:])
-				evtHandler.DeleteScope(seqNo, version, vbId, manifestUid, scopeId)
+				evtHandler.DeleteScope(seqNo, version, vbId, manifestUid, scopeId, streamId)
 			case StreamEventCollectionChanged:
 				manifestUid := binary.BigEndian.Uint64(resp.Value[0:])
 				collectionId := binary.BigEndian.Uint32(resp.Value[8:])
 				ttl := binary.BigEndian.Uint32(resp.Value[12:])
-				evtHandler.ModifyCollection(seqNo, version, vbId, manifestUid, collectionId, ttl)
+				evtHandler.ModifyCollection(seqNo, version, vbId, manifestUid, collectionId, ttl, streamId)
 			}
 		case cmdDcpStreamEnd:
 			vbId := uint16(resp.Vbucket)
 			code := streamEndStatus(binary.BigEndian.Uint32(resp.Extras[0:]))
-			evtHandler.End(vbId, getStreamEndError(code))
+			var streamId uint16
+			if resp.FrameExtras != nil && resp.FrameExtras.HasStreamId {
+				streamId = resp.FrameExtras.StreamId
+			}
+			evtHandler.End(vbId, streamId, getStreamEndError(code))
 			req.Cancel()
 		}
 	}
@@ -323,6 +334,36 @@ func (agent *Agent) OpenStream(vbId uint16, flags DcpStreamAddFlag, vbUuid VbUui
 		Callback:   handler,
 		ReplicaIdx: 0,
 		Persistent: true,
+	}
+	return agent.dispatchOp(req)
+}
+
+// CloseStreamWithId shuts down an open stream for the specified VBucket for the specified stream.
+func (agent *Agent) CloseStreamWithId(vbId uint16, streamId uint16, cb CloseStreamCallback) (PendingOp, error) {
+	handler := func(_ *memdQResponse, _ *memdQRequest, err error) {
+		cb(err)
+	}
+
+	frameExtras := &memdFrameExtras{
+		HasStreamId: true,
+		StreamId:    streamId,
+	}
+
+	req := &memdQRequest{
+		memdPacket: memdPacket{
+			Magic:       altReqMagic,
+			Opcode:      cmdDcpCloseStream,
+			Datatype:    0,
+			Cas:         0,
+			Extras:      nil,
+			Key:         nil,
+			Value:       nil,
+			Vbucket:     vbId,
+			FrameExtras: frameExtras,
+		},
+		Callback:   handler,
+		ReplicaIdx: 0,
+		Persistent: false,
 	}
 	return agent.dispatchOp(req)
 }
