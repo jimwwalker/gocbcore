@@ -2,6 +2,7 @@ package gocbcore
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"io/ioutil"
@@ -18,6 +19,7 @@ type HttpRequest struct {
 	Username string
 	Password string
 	Body     []byte
+	Context  context.Context
 }
 
 // HttpResponse encapsulates the response from an HTTP request.
@@ -126,6 +128,11 @@ func (agent *Agent) DoHttpRequest(req *HttpRequest) (*HttpResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+	// hreq.WithContext will panic if ctx is nil so make absolutely sure it isn't
+	if req.Context == nil {
+		req.Context = context.Background()
+	}
+	hreq = hreq.WithContext(req.Context)
 
 	body := req.Body
 
