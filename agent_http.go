@@ -167,6 +167,7 @@ func (agent *Agent) DoHttpRequest(req *HttpRequest) (*HttpResponse, error) {
 	}
 
 	hreq.Body = ioutil.NopCloser(bytes.NewReader(body))
+	hreq.Header.Set("Content-Type", "application/json")
 
 	hresp, err := agent.httpCli.Do(hreq)
 	if err != nil {
