@@ -123,7 +123,7 @@ func (agent *Agent) GetCollectionID(scopeName string, collectionName string, cb 
 		}
 
 		manifestID := binary.BigEndian.Uint64(resp.Extras[0:])
-		collectionID := binary.BigEndian.Uint32(resp.Extras[4:])
+		collectionID := binary.BigEndian.Uint32(resp.Extras[8:])
 		cb(manifestID, collectionID, nil)
 	}
 

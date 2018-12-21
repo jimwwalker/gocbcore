@@ -68,6 +68,7 @@ const (
 	cmdGetClusterConfig       = commandCode(0xb5)
 	cmdGetRandom              = commandCode(0xb6)
 	cmdCollectionsGetManifest = commandCode(0xba)
+	cmdCollectionsGetID       = commandCode(0xbb)
 	cmdSubDocGet              = commandCode(0xc5)
 	cmdSubDocExists           = commandCode(0xc6)
 	cmdSubDocDictAdd          = commandCode(0xc7)

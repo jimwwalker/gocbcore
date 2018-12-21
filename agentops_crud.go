@@ -710,6 +710,7 @@ func (agent *Agent) ReplaceEx(opts ReplaceOptions, cb StoreExCallback) (PendingO
 type AdjoinOptions struct {
 	Key          []byte
 	Value        []byte
+	CollectionID uint32
 	TraceContext opentracing.SpanContext
 }
 
@@ -786,6 +787,7 @@ type CounterOptions struct {
 	Initial      uint64
 	Expiry       uint32
 	TraceContext opentracing.SpanContext
+	CollectionID uint32
 }
 
 // CounterResult encapsulates the result of a IncrementEx or DecrementEx operation.
