@@ -1,7 +1,9 @@
 package gocbcore
 
 import (
+	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"log"
 	"strconv"
 )
@@ -107,5 +109,37 @@ func (agent *Agent) GetCollectionManifest(cb CollectionManifestCallback) (Pendin
 		Callback: handler,
 	}
 	log.Printf("Requesting manifest %+v", req)
+	return agent.dispatchOp(req)
+}
+
+type CollectionIdCallback func(manifestID uint64, collectionID uint32, err error)
+
+func (agent *Agent) GetCollectionID(scopeName string, collectionName string, cb CollectionIdCallback) (PendingOp, error) {
+	handler := func(resp *memdQResponse, req *memdQRequest, err error) {
+		log.Printf("Got Collection ID %+v %+v %+v", err, resp, req)
+		if err != nil {
+			cb(0, 0, err)
+			return
+		}
+
+		manifestID := binary.BigEndian.Uint64(resp.Extras[0:])
+		collectionID := binary.BigEndian.Uint32(resp.Extras[4:])
+		cb(manifestID, collectionID, nil)
+	}
+
+	req := &memdQRequest{
+		memdPacket: memdPacket{
+			Magic:    reqMagic,
+			Opcode:   cmdCollectionsGetID,
+			Datatype: 0,
+			Cas:      0,
+			Extras:   nil,
+			Key:      []byte(fmt.Sprintf("%s.%s", scopeName, collectionName)),
+			Value:    nil,
+			Vbucket:  0,
+		},
+		Callback: handler,
+	}
+	log.Printf("Requesting collection ID %+v", req)
 	return agent.dispatchOp(req)
 }
