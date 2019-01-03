@@ -20,6 +20,7 @@ type HttpRequest struct {
 	Password string
 	Body     []byte
 	Context  context.Context
+	Headers  map[string]string
 }
 
 // HttpResponse encapsulates the response from an HTTP request.
@@ -168,6 +169,9 @@ func (agent *Agent) DoHttpRequest(req *HttpRequest) (*HttpResponse, error) {
 
 	hreq.Body = ioutil.NopCloser(bytes.NewReader(body))
 	hreq.Header.Set("Content-Type", "application/json")
+	for key, val := range req.Headers {
+		hreq.Header.Set(key, val)
+	}
 
 	hresp, err := agent.httpCli.Do(hreq)
 	if err != nil {
