@@ -40,7 +40,7 @@ type CollectionStreamObserver interface {
 	Expiration(seqNo, revNo, cas uint64, vbId uint16, collectionId uint32, streamId uint16, key []byte)
 	End(vbId uint16, streamId uint16, err error)
 	CreateCollection(seqNo uint64, version uint8, vbId uint16, manifestUid uint64, scopeId uint32, collectionId uint32, ttl uint32, streamId uint16, key []byte)
-	DeleteCollection(seqNo uint64, version uint8, vbId uint16, manifestUid uint64, collectionId uint32, streamId uint16)
+	DeleteCollection(seqNo uint64, version uint8, vbId uint16, manifestUid uint64, scopeId uint32, collectionId uint32, streamId uint16)
 	// FlushCollection(seqNo uint64, version uint8, vbId uint16, manifest_uid uint64, collection_id uint32)	// Not yet existing
 	CreateScope(seqNo uint64, version uint8, vbId uint16, manifestUid uint64, scopeId uint32, streamId uint16, key []byte)
 	DeleteScope(seqNo uint64, version uint8, vbId uint16, manifestUid uint64, scopeId uint32, streamId uint16)
@@ -170,8 +170,9 @@ func (agent *Agent) OpenCollectionStream(vbId uint16, flags DcpStreamAddFlag, vb
 				evtHandler.CreateCollection(seqNo, version, vbId, manifestUid, scopeId, collectionId, ttl, streamId, resp.Key)
 			case StreamEventCollectionDelete:
 				manifestUid := binary.BigEndian.Uint64(resp.Value[0:])
-				collectionId := binary.BigEndian.Uint32(resp.Value[8:])
-				evtHandler.DeleteCollection(seqNo, version, vbId, manifestUid, collectionId, streamId)
+				scopeId := binary.BigEndian.Uint32(resp.Value[8:])
+				collectionId := binary.BigEndian.Uint32(resp.Value[12:])
+				evtHandler.DeleteCollection(seqNo, version, vbId, manifestUid, scopeId, collectionId, streamId)
 			case StreamEventCollectionFlush:
 				// This isn't yet in existence but proposed
 			case StreamEventScopeCreate:
