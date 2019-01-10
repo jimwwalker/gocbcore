@@ -11,6 +11,7 @@ type ObserveOptions struct {
 	Key          []byte
 	ReplicaIdx   int
 	TraceContext opentracing.SpanContext
+	CollectionID uint32
 }
 
 // ObserveResult encapsulates the result of a ObserveEx operation.
@@ -60,13 +61,15 @@ func (agent *Agent) ObserveEx(opts ObserveOptions, cb ObserveExCallback) (Pendin
 		}, nil)
 	}
 
-	vbId := agent.KeyToVbucket(opts.Key)
+	encodedKey := agent.createEncodedKey(opts.Key, opts.CollectionID)
+
+	vbId := agent.KeyToVbucket(encodedKey)
 	keyLen := len(opts.Key)
 
 	valueBuf := make([]byte, 2+2+keyLen)
 	binary.BigEndian.PutUint16(valueBuf[0:], vbId)
 	binary.BigEndian.PutUint16(valueBuf[2:], uint16(keyLen))
-	copy(valueBuf[4:], opts.Key)
+	copy(valueBuf[4:], encodedKey)
 
 	req := &memdQRequest{
 		memdPacket: memdPacket{
