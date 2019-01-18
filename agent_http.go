@@ -12,15 +12,16 @@ import (
 
 // HttpRequest contains the description of an HTTP request to perform.
 type HttpRequest struct {
-	Service  ServiceType
-	Method   string
-	Endpoint string
-	Path     string
-	Username string
-	Password string
-	Body     []byte
-	Context  context.Context
-	Headers  map[string]string
+	Service     ServiceType
+	Method      string
+	Endpoint    string
+	Path        string
+	Username    string
+	Password    string
+	Body        []byte
+	Context     context.Context
+	Headers     map[string]string
+	ContentType string
 }
 
 // HttpResponse encapsulates the response from an HTTP request.
@@ -168,7 +169,12 @@ func (agent *Agent) DoHttpRequest(req *HttpRequest) (*HttpResponse, error) {
 	}
 
 	hreq.Body = ioutil.NopCloser(bytes.NewReader(body))
-	hreq.Header.Set("Content-Type", "application/json")
+
+	if req.ContentType != "" {
+		hreq.Header.Set("Content-Type", req.ContentType)
+	} else {
+		hreq.Header.Set("Content-Type", "application/json")
+	}
 	for key, val := range req.Headers {
 		hreq.Header.Set(key, val)
 	}
