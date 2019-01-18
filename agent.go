@@ -699,6 +699,11 @@ func (agent *Agent) connect(memdAddrs, httpAddrs []string, deadline time.Time) e
 			continue
 		}
 
+		if agent.useCollections && !checkSupportsFeature(client.features, FeatureCollections) {
+			logDebugf("Disabling collections as unsupported")
+			agent.useCollections = false
+		}
+
 		disconnectClient := func() {
 			err := client.Close()
 			if err != nil {
