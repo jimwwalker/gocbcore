@@ -89,7 +89,7 @@ func (agent *Agent) getKvErrMapData(code StatusCode) *kvErrorMapError {
 	return nil
 }
 
-func (agent *Agent) makeMemdError(code StatusCode, errMapData *kvErrorMapError, ehData []byte) error {
+func (agent *Agent) makeMemdError(code StatusCode, errMapData *kvErrorMapError, opaque uint32, ehData []byte) error {
 	if code == StatusSuccess {
 		return nil
 	}
@@ -105,6 +105,8 @@ func (agent *Agent) makeMemdError(code StatusCode, errMapData *kvErrorMapError, 
 		} else {
 			err = newSimpleError(code)
 		}
+
+		err.Opaque = opaque
 
 		if ehData != nil {
 			var enhancedData struct {
@@ -137,13 +139,13 @@ func (agent *Agent) makeMemdError(code StatusCode, errMapData *kvErrorMapError, 
 	return newSimpleError(code)
 }
 
-func (agent *Agent) makeBasicMemdError(code StatusCode) error {
+func (agent *Agent) makeBasicMemdError(code StatusCode, opaque uint32) error {
 	if !agent.useKvErrorMaps {
-		return agent.makeMemdError(code, nil, nil)
+		return agent.makeMemdError(code, nil, opaque, nil)
 	}
 
 	errMapData := agent.getKvErrMapData(code)
-	return agent.makeMemdError(code, errMapData, nil)
+	return agent.makeMemdError(code, errMapData, opaque, nil)
 }
 
 func (agent *Agent) handleOpRoutingResp(resp *memdQResponse, req *memdQRequest, err error) (bool, error) {
@@ -187,7 +189,7 @@ func (agent *Agent) handleOpRoutingResp(resp *memdQResponse, req *memdQRequest, 
 		}
 
 		if DatatypeFlag(resp.Datatype)&DatatypeFlagJson != 0 {
-			err = agent.makeMemdError(resp.Status, kvErrData, resp.Value)
+			err = agent.makeMemdError(resp.Status, kvErrData, resp.Opaque, resp.Value)
 
 			if !IsErrorStatus(err, StatusSuccess) &&
 				!IsErrorStatus(err, StatusKeyNotFound) &&
@@ -195,7 +197,7 @@ func (agent *Agent) handleOpRoutingResp(resp *memdQResponse, req *memdQRequest, 
 				logDebugf("detailed error: %+v", err)
 			}
 		} else {
-			err = agent.makeMemdError(resp.Status, kvErrData, nil)
+			err = agent.makeMemdError(resp.Status, kvErrData, resp.Opaque, nil)
 		}
 	}
 

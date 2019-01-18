@@ -98,6 +98,7 @@ type KvError struct {
 	Description string
 	Context     string
 	Ref         string
+	Opaque      uint32
 }
 
 func getMemdErrorDesc(code StatusCode) string {
@@ -147,9 +148,9 @@ func getMemdErrorDesc(code StatusCode) string {
 	case StatusTmpFail:
 		return "temporary failure occurred, try again later"
 	case StatusCollectionUnknown:
-		return "collection unknown"
+		return "the requested collection cannot be found"
 	case StatusScopeUnknown:
-		return "scope unknown"
+		return "the requested scope cannot be found."
 	case StatusSubDocPathNotFound:
 		return "sub-document path does not exist"
 	case StatusSubDocPathMismatch:
