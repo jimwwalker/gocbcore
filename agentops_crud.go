@@ -747,6 +747,8 @@ func (agent *Agent) adjoinEx(opName string, opcode commandCode, opts AdjoinOptio
 		}, nil)
 	}
 
+	encodedKey := agent.createEncodedKey(opts.Key, opts.CollectionID)
+
 	req := &memdQRequest{
 		memdPacket: memdPacket{
 			Magic:    reqMagic,
@@ -754,7 +756,7 @@ func (agent *Agent) adjoinEx(opName string, opcode commandCode, opts AdjoinOptio
 			Datatype: 0,
 			Cas:      0,
 			Extras:   nil,
-			Key:      opts.Key,
+			Key:      encodedKey,
 			Value:    opts.Value,
 		},
 		Callback:         handler,
@@ -832,6 +834,8 @@ func (agent *Agent) counterEx(opName string, opcode commandCode, opts CounterOpt
 		}, nil)
 	}
 
+	encodedKey := agent.createEncodedKey(opts.Key, opts.CollectionID)
+	
 	// You cannot have an expiry when you do not want to create the document.
 	if opts.Initial == uint64(0xFFFFFFFFFFFFFFFF) && opts.Expiry != 0 {
 		return nil, ErrInvalidArgs
@@ -854,7 +858,7 @@ func (agent *Agent) counterEx(opName string, opcode commandCode, opts CounterOpt
 			Datatype: 0,
 			Cas:      0,
 			Extras:   extraBuf,
-			Key:      opts.Key,
+			Key:      encodedKey,
 			Value:    nil,
 		},
 		Callback:         handler,
