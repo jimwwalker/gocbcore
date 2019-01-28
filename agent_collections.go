@@ -8,11 +8,13 @@ import (
 	"strconv"
 )
 
+// CollectionManifestCollection represents a collection entry within a manifest.
 type CollectionManifestCollection struct {
 	UID  uint64
 	Name string
 }
 
+// UnmarshalJSON is used to build a CollectionManifestCollection entry from bytes.
 func (item *CollectionManifestCollection) UnmarshalJSON(data []byte) error {
 	decData := struct {
 		UID  string `json:"uid"`
@@ -32,12 +34,14 @@ func (item *CollectionManifestCollection) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// CollectionManifestScope represents a scope entry within a manifest.
 type CollectionManifestScope struct {
 	UID         uint64
 	Name        string
 	Collections []CollectionManifestCollection
 }
 
+// UnmarshalJSON is used to build a CollectionManifestScope entry from bytes.
 func (item *CollectionManifestScope) UnmarshalJSON(data []byte) error {
 	decData := struct {
 		UID         string                         `json:"uid"`
@@ -59,11 +63,14 @@ func (item *CollectionManifestScope) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// CollectionManifest represents a manifest from the server, it contains details about available scopes
+// and collections.
 type CollectionManifest struct {
 	UID    uint64
 	Scopes []CollectionManifestScope
 }
 
+// UnmarshalJSON is used to build a CollectionManifest entry from bytes.
 func (item *CollectionManifest) UnmarshalJSON(data []byte) error {
 	decData := struct {
 		UID    string                    `json:"uid"`
@@ -83,8 +90,10 @@ func (item *CollectionManifest) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// CollectionManifestCallback is invoked upon completion of a GetCollectionManifest operation.
 type CollectionManifestCallback func(manifest []byte, err error)
 
+// GetCollectionManifest fetches the latest manifest from the server.
 func (agent *Agent) GetCollectionManifest(cb CollectionManifestCallback) (PendingOp, error) {
 	handler := func(resp *memdQResponse, req *memdQRequest, err error) {
 		log.Printf("Got Manifest %+v %+v %+v", err, resp, req)
@@ -112,8 +121,11 @@ func (agent *Agent) GetCollectionManifest(cb CollectionManifestCallback) (Pendin
 	return agent.dispatchOp(req)
 }
 
+// CollectionIdCallback is invoked upon completion of a GetCollectionID operation.
 type CollectionIdCallback func(manifestID uint64, collectionID uint32, err error)
 
+// GetCollectionID fetches the collection id and manifest id that the collection belongs to, given a scope name
+// and collection name.
 func (agent *Agent) GetCollectionID(scopeName string, collectionName string, cb CollectionIdCallback) (PendingOp, error) {
 	handler := func(resp *memdQResponse, req *memdQRequest, err error) {
 		log.Printf("Got Collection ID %+v %+v %+v", err, resp, req)

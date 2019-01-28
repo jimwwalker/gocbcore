@@ -835,7 +835,7 @@ func (agent *Agent) counterEx(opName string, opcode commandCode, opts CounterOpt
 	}
 
 	encodedKey := agent.createEncodedKey(opts.Key, opts.CollectionID)
-	
+
 	// You cannot have an expiry when you do not want to create the document.
 	if opts.Initial == uint64(0xFFFFFFFFFFFFFFFF) && opts.Expiry != 0 {
 		return nil, ErrInvalidArgs
