@@ -120,6 +120,8 @@ func (agent *Agent) DoHttpRequest(req *HttpRequest) (*HttpResponse, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		req.Endpoint = endpoint
 	}
 
 	// Generate a request URI
