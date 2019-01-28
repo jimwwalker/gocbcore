@@ -64,7 +64,7 @@ func (agent *Agent) ObserveEx(opts ObserveOptions, cb ObserveExCallback) (Pendin
 	encodedKey := agent.createEncodedKey(opts.Key, opts.CollectionID)
 
 	vbId := agent.KeyToVbucket(encodedKey)
-	keyLen := len(opts.Key)
+	keyLen := len(encodedKey)
 
 	valueBuf := make([]byte, 2+2+keyLen)
 	binary.BigEndian.PutUint16(valueBuf[0:], vbId)
