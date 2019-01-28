@@ -116,7 +116,7 @@ const (
 	FeatureSelectBucket = HelloFeature(0x08)
 
 	// FeatureCollections indicates support for collections.
-	FeatureCollections = HelloFeature(0x09)
+	FeatureCollections = HelloFeature(0x12)
 
 	// FeatureSnappy indicates support for snappy compressed documents.
 	FeatureSnappy = HelloFeature(0x0a)
