@@ -644,9 +644,27 @@ func getStreamEndError(code streamEndStatus) error {
 		return ErrStreamDisconnected
 	case streamEndTooSlow:
 		return ErrStreamTooSlow
+	case streamEndFilterEmpty:
+		return ErrStreamFilterEmpty
 	default:
 		return &streamEndError{code}
 	}
+}
+
+func GetStreamEndValue(err error) (streamEndStatus) {
+	switch err {
+	case ErrStreamClosed:
+		return streamEndClosed
+	case ErrStreamStateChanged:
+		return streamEndStateChanged
+	case ErrStreamDisconnected:
+		return streamEndDisconnected
+	case ErrStreamTooSlow:
+		return streamEndTooSlow
+	case ErrStreamFilterEmpty:
+		return streamEndFilterEmpty
+	}
+	return 0
 }
 
 func findMemdError(code StatusCode) (bool, error) {
